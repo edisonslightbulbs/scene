@@ -2,6 +2,7 @@
 #include "file.h"
 #include "usage.h"
 
+#if __linux__
 cv::Mat scene::grabFrame(std::shared_ptr<Kinect>& sptr_kinect)
 {
     sptr_kinect->capture();
@@ -23,6 +24,7 @@ cv::Mat scene::grabFrame(std::shared_ptr<Kinect>& sptr_kinect)
 
     return frame;
 }
+#endif
 
 void scene::write(std::vector<cv::Mat> scene)
 {
@@ -34,8 +36,8 @@ void scene::write(std::vector<cv::Mat> scene)
 
 void scene::load(std::vector<cv::Mat>& scene)
 {
-    const std::string file_0 = "./output/scene/black.png";
-    const std::string file_1 = "./output/scene/white.png";
+    const std::string file_0 = "./output/scene/samples/black.png";
+    const std::string file_1 = "./output/scene/samples/white.png";
     cv::Mat img_0 = cv::imread(file_0, cv::IMREAD_COLOR);
     cv::Mat img_1 = cv::imread(file_1, cv::IMREAD_COLOR);
     scene[0] = img_0;
@@ -43,7 +45,7 @@ void scene::load(std::vector<cv::Mat>& scene)
 }
 
 void scene::project(const std::string& window, const int& w, const int& h,
-                    cv::Mat& img, const cv::Mat& R, const cv::Mat& t)
+    cv::Mat& img, const cv::Mat& R, const cv::Mat& t)
 {
     cv::rotate(img, img, cv::ROTATE_90_CLOCKWISE);
 
@@ -71,9 +73,10 @@ cv::Mat scene::displayColor(const bool& contrast, const int& w, const int& h)
     }
 }
 
+#if __linux__
 void scene::alternateDisplayColor(std::shared_ptr<Kinect>& sptr_kinect,
-                                  const std::string& window, const int& w, const int& h,
-                                  std::vector<cv::Mat>& scene)
+    const std::string& window, const int& w, const int& h,
+    std::vector<cv::Mat>& scene)
 {
     bool contrast = false;
     cv::namedWindow(window, cv::WINDOW_NORMAL);
@@ -99,6 +102,7 @@ void scene::alternateDisplayColor(std::shared_ptr<Kinect>& sptr_kinect,
         }
     }
 }
+#endif
 
 void scene::saturate(const cv::Mat& src, cv::Mat& dst)
 {
@@ -133,7 +137,8 @@ void scene::undistort(cv::Mat& frame)
     cv::undistort(frame, undistortedFrame, K, distortionCoefficients, refinedK);
 }
 
-cv::Rect scene::projectionArea(const cv::Mat& background, const cv::Mat& foreground)
+cv::Rect scene::projectionArea(
+    const cv::Mat& background, const cv::Mat& foreground)
 {
     // image subtraction
     cv::Mat colorDiff, gray_0, gray_1, grayDiff, sharpGray;
