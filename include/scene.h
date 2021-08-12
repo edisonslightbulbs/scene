@@ -32,7 +32,7 @@ void undistort(cv::Mat& frame);
 
 void saturate(const cv::Mat& src, cv::Mat& dst);
 
-cv::Rect projectionArea(const cv::Mat& background, const cv::Mat& foreground);
+cv::Rect findProjectionArea(const cv::Mat& background, const cv::Mat& foreground);
 
 }
 #endif // SCENE_H

@@ -137,41 +137,87 @@ void scene::undistort(cv::Mat& frame)
     cv::undistort(frame, undistortedFrame, K, distortionCoefficients, refinedK);
 }
 
-cv::Rect scene::projectionArea(
-    const cv::Mat& background, const cv::Mat& foreground)
+cv::Rect scene::findProjectionArea(const cv::Mat& src1, const cv::Mat& src2)
 {
-    // image subtraction
-    cv::Mat colorDiff, gray_0, gray_1, grayDiff, sharpGray;
-    cv::cvtColor(background, gray_0, cv::COLOR_BGR2GRAY);
-    cv::cvtColor(foreground, gray_1, cv::COLOR_BGR2GRAY);
+    cv::Mat background, foreground;
+    background = src1;
+    foreground = src2;
 
-    colorDiff = background - foreground;
-    // undistort(colorDiff);
-    grayDiff = gray_0 - gray_1;
+    // subtract images and contrast resulting image
+    cv::Mat diff, contrast;
+    diff = background - foreground;
+    saturate(diff, contrast);
+    // todo: undistort
 
-    // sharpen gray diff
-    cv::Mat saturated;
-    saturate(colorDiff, saturated);
-    cv::cvtColor(saturated, sharpGray, cv::COLOR_BGR2GRAY);
+    // split high contrast image
+    cv::Mat rgb[3];
+    cv::Mat bgr;
+    cv::cvtColor(contrast, bgr,  cv::COLOR_BGR2RGB);
 
-    // remove noise using smoothing
-    cv::Mat blurred, thresholded;
-    cv::Size dBlur = cv::Size(33, 33);
-    cv::GaussianBlur(sharpGray, blurred, dBlur, 0);
+    cv::split(bgr, rgb);
+    // cv::equalizeHist(src, dst); // one other good approach to contrasting
 
-    // threshold to extract flux
-    cv::threshold(
-        blurred, thresholded, 0, 255, cv::THRESH_BINARY + cv::THRESH_OTSU);
+    // threshold blue channel
+    cv::Mat thresh;
+    cv::threshold(rgb[2], thresh, 0, 255, cv::THRESH_BINARY + cv::THRESH_OTSU);
+
+    // clean using morphological operations
+    cv::Mat shape, proposal;
+    shape = cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(3, 3));
+    cv::morphologyEx(thresh, proposal, cv::MORPH_OPEN, shape);
+
+    // de-noise
+    cv::Mat blur, secThresh;
+    cv::Size dBlur = cv::Size(75, 75);
+    cv::GaussianBlur(proposal, blur, dBlur, 0);
+
+    // threshold denoised frame
+    cv::threshold(blur, secThresh, 0, 255, cv::THRESH_BINARY + cv::THRESH_OTSU);
+
+    // flood fill
+    cv::Mat floodFill = secThresh.clone();
+    cv::floodFill(floodFill, cv::Point(0, 0), cv::Scalar(255));
+
+    // invert flood fill
+    cv::Mat floodFillInv;
+    cv::bitwise_not(floodFill, floodFillInv);
+
+    // combine threshold and flood fill inverse
+    cv::Mat roi = (secThresh | floodFillInv);
 
 #define show 0
 #if show == 1
-    cv::imshow("Color difference", colorDiff);
-    cv::imshow("Gray difference", grayDiff);
-    cv::imshow("Saturated difference", saturated);
-    cv::imshow("Sharpened gray difference", sharpGray);
-    cv::imshow("Blurred gray difference", blurred);
-    cv::imshow("OTSU threshold", thresholded);
+    cv::imshow("1: Background subtraction", diff);
+    cv::imshow("2: Contrast", contrast);
+    cv::imshow("3.1: Red channel", rgb[0]);
+    cv::imshow("3.2: Green channel", rgb[1]);
+    cv::imshow("3.3: Blue channel", rgb[2]);
+    cv::imshow("4: Binary inverted threshold", thresh);
+    cv::imshow("5.1: Morphological cleaning", proposal);
+    cv::imshow("5.2: Morphological cleaning", blur);
+    cv::imshow("5.3: Morphological cleaning", secThresh);
+    cv::imshow("6.1: Flood-fill", floodFill);
+    cv::imshow("6.2: Flood-fill inverse", floodFillInv);
+    cv::imshow("7: ROI", roi);
+    cv::waitKey();
 #endif
-    // get ROI boundary
-    return cv::boundingRect(thresholded);
+
+#define write 0
+#if write == 1
+    cv::imwrite("./output/background.png", src1);
+    cv::imwrite("./output/foreground.png", src2);
+    cv::imwrite("./output/01___diff.png", diff);
+    cv::imwrite("./output/02___contrast.png", contrast);
+    cv::imwrite("./output/03___redchannel.png", rgb[0]);
+    cv::imwrite("./output/04___greenchannel.png", rgb[1]);
+    cv::imwrite("./output/05___bluechannel.png", rgb[2]);
+    cv::imwrite("./output/06___thresh.png", thresh);
+    cv::imwrite("./output/07___proposal.png", proposal);
+    cv::imwrite("./output/08___blur.png", blur);
+    cv::imwrite("./output/09___secthresh.png", secThresh);
+    cv::imwrite("./output/10___floodfill.png", floodFill);
+    cv::imwrite("./output/11___floodfillinverse.png", floodFillInv);
+    cv::imwrite("./output/12___segment.png", roi);
+#endif
+    return cv::boundingRect(roi);
 }
