@@ -14,7 +14,7 @@ void write(std::vector<cv::Mat> scene);
 void load(std::vector<cv::Mat>& scene);
 
 #if __linux__
-cv::Mat grabFrame(std::shared_ptr<Kinect>& sptr_kinect);
+cv::Mat grabFrame(std::shared_ptr<kinect>& sptr_kinect);
 #endif
 
 void project(const std::string& window, const int& w, const int& h,
@@ -23,7 +23,7 @@ void project(const std::string& window, const int& w, const int& h,
 cv::Mat displayColor(const bool& contrast, const int& w, const int& h);
 
 #if __linux__
-void alternateDisplayColor(std::shared_ptr<Kinect>& sptr_kinect,
+void alternateDisplayColor(std::shared_ptr<kinect>& sptr_kinect,
     const std::string& window, const int& w, const int& h,
     std::vector<cv::Mat>& scene);
 #endif

@@ -3,7 +3,7 @@
 #include "usage.h"
 
 #if __linux__
-cv::Mat scene::grabFrame(std::shared_ptr<Kinect>& sptr_kinect)
+cv::Mat scene::grabFrame(std::shared_ptr<kinect>& sptr_kinect)
 {
     sptr_kinect->capture();
     sptr_kinect->depthCapture();
@@ -74,7 +74,7 @@ cv::Mat scene::displayColor(const bool& contrast, const int& w, const int& h)
 }
 
 #if __linux__
-void scene::alternateDisplayColor(std::shared_ptr<Kinect>& sptr_kinect,
+void scene::alternateDisplayColor(std::shared_ptr<kinect>& sptr_kinect,
     const std::string& window, const int& w, const int& h,
     std::vector<cv::Mat>& scene)
 {
